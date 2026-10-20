@@ -1,6 +1,6 @@
 # FixedReconnectDelay 1.0.0
 
-**The delay is 15 minutes (900 seconds).** The repository's `15-Second-reconnect-delay` name does not change the plugin's behavior.
+**The delay is 15 minutes (900 seconds).**
 
 Standalone ZenithProxy plugin for Minecraft **1.21.4**, built against ZenithProxy **3.7.0+1.21.4**. Install this JAR separately from ObsidianFarmWatchdog.
 
@@ -10,7 +10,7 @@ After a session that reached the Minecraft world or queue disconnects, the plugi
 
 ## Install
 
-Download [FixedReconnectDelay-1.0.0.jar](https://github.com/jackforg/15-Second-reconnect-delay/releases/download/v1.0.0/FixedReconnectDelay-1.0.0.jar) from the [v1.0.0 release](https://github.com/jackforg/15-Second-reconnect-delay/releases/tag/v1.0.0).
+Download [FixedReconnectDelay-1.0.0.jar](https://github.com/jackforg/15-Minute-reconnect-delay/releases/download/v1.0.0/FixedReconnectDelay-1.0.0.jar) from the [v1.0.0 release](https://github.com/jackforg/15-Minute-reconnect-delay/releases/tag/v1.0.0).
 
 1. Stop ZenithProxy.
 2. Copy `FixedReconnectDelay-1.0.0.jar` into its `plugins` folder.
