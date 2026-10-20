@@ -1,0 +1,16 @@
+FixedReconnectDelay 1.0.0
+Validation date: 2026-10-20 (Europe/London)
+Command: .\gradlew.bat --offline clean test shadowJar --console=plain --no-daemon
+Result: BUILD SUCCESSFUL
+JUnit: 23 tests passed; 0 failures; 0 errors; 0 skipped.
+ReconnectControllerTest: 17 passed.
+SessionHistoryTest: 6 passed.
+Target: ZenithProxy 3.7.0+1.21.4; Minecraft 1.21.4.
+Build Java: 25; output class version: 65 (Java 21).
+Entrypoint: bot.reconnect.FixedReconnectDelayPlugin
+Plugin ID: fixed-reconnect-delay
+Plugin metadata: zenithproxy.plugin.json present.
+Release: release/FixedReconnectDelay-1.0.0.jar
+Bytes: 9791
+SHA256: 243EAFF3EC339B7378CBB5C73B20AD5DB87187BA4E59253229FB0B460D8B0E01
+No live Minecraft/Zenith session was started during validation.

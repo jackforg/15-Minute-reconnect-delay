@@ -1,0 +1,53 @@
+name: Publish v1.0.0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release.yml'
+      - 'release/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-v1.0.0
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release files
+        uses: actions/checkout@v4
+
+      - name: Verify the tested JAR
+        working-directory: release
+        run: sha256sum --check SHA256SUMS
+
+      - name: Publish release and attach downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=v1.0.0
+          if gh release view "$tag" --json isDraft --jq '.isDraft' > "$RUNNER_TEMP/release-state" 2>/dev/null; then
+            if [ "$(cat "$RUNNER_TEMP/release-state")" = false ]; then
+              echo "Release $tag is already published; leaving it unchanged."
+              exit 0
+            fi
+          else
+            gh release create "$tag" \
+              --target "$GITHUB_SHA" \
+              --title 'FixedReconnectDelay v1.0.0 - 15-minute reconnect delay' \
+              --notes-file release/RELEASE-NOTES.md \
+              --draft
+          fi
+          gh release upload "$tag" \
+            release/FixedReconnectDelay-1.0.0.jar \
+            release/SHA256SUMS \
+            --clobber
+          gh release edit "$tag" --draft=false --latest
