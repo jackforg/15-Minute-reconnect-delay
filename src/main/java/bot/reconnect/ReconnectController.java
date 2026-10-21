@@ -40,12 +40,13 @@ final class ReconnectController {
     if (!establishedSession && pending != null) return;
     long disconnectedAt = nanoTime.getAsLong();
     cancel();
-    if (!actions.allowed()) return;
+    long expectedGeneration = generation;
+    if (!actions.allowed() || expectedGeneration != generation) return;
     int seconds = establishedSession
         ? DISCONNECT_DELAY_SECONDS
         : Math.max(0, actions.failedAttemptDelaySeconds());
     deadline = disconnectedAt + TimeUnit.SECONDS.toNanos(seconds);
-    schedule(generation);
+    schedule(expectedGeneration);
     actions.scheduled(seconds, !establishedSession);
   }
 
@@ -55,31 +56,45 @@ final class ReconnectController {
     pending = null;
   }
 
+  synchronized void resumeCooldown(long remainingNanos) {
+    long resumedAt = nanoTime.getAsLong();
+    cancel();
+    long expectedGeneration = generation;
+    if (!actions.allowed() || expectedGeneration != generation) return;
+    deadline = resumedAt + Math.max(0, remainingNanos);
+    schedule(expectedGeneration);
+    long seconds = remainingNanos <= 0 ? 0 : TimeUnit.NANOSECONDS.toSeconds(remainingNanos - 1) + 1;
+    actions.scheduled((int) Math.min(Integer.MAX_VALUE, seconds), false);
+  }
+
   private void schedule(long expectedGeneration) {
     long remaining = Math.max(0, deadline - nanoTime.getAsLong());
     pending = scheduler.schedule(() -> reconnect(expectedGeneration), remaining);
   }
 
-  private synchronized void reconnect(long expectedGeneration) {
-    if (expectedGeneration != generation) return;
-    if (deadline - nanoTime.getAsLong() > 0) {
-      schedule(expectedGeneration);
-      return;
+  private void reconnect(long expectedGeneration) {
+    synchronized (this) {
+      if (expectedGeneration != generation) return;
+      if (deadline - nanoTime.getAsLong() > 0) {
+        schedule(expectedGeneration);
+        return;
+      }
+      pending = null;
+      if (actions.connectionActive() || !actions.allowed() || expectedGeneration != generation) return;
     }
-    pending = null;
-    // Recheck at the deadline: a manual connection, disabled AutoReconnect, or a
-    // watchdog veto received during the wait must not be overridden by a stale timer.
-    if (actions.connectionActive() || !actions.allowed() || expectedGeneration != generation) return;
     try {
-      // Serialize the start against new disconnects so an expired timer cannot
-      // connect after a newer session has started another 15-minute cooldown.
+      // Proxy.connect's entry guard checks the durable cooldown again. Do not hold
+      // this monitor during login: a network disconnect callback must remain free
+      // to record a new cooldown while connect waits for the network.
       actions.connect();
     } catch (RuntimeException failure) {
       actions.failed(failure);
       // Most failures produce a disconnect event themselves. Only supply a retry
       // when no newer event/connection has already taken ownership.
-      if (expectedGeneration == generation && pending == null
-          && !actions.connectionActive()) disconnected(false);
+      synchronized (this) {
+        if (expectedGeneration == generation && pending == null
+            && !actions.connectionActive()) disconnected(false);
+      }
     }
   }
 }

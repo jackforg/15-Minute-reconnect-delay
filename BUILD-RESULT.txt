@@ -1,16 +1,22 @@
-FixedReconnectDelay 1.0.0
-Validation date: 2026-10-20 (Europe/London)
-Command: .\gradlew.bat --offline clean test shadowJar --console=plain --no-daemon
+FixedReconnectDelay 1.0.1
+Validation date: 2026-10-21 (Europe/London)
+Commands: .\gradlew.bat --offline clean test shadowJar --console=plain --no-daemon; final .\gradlew.bat --offline test shadowJar --console=plain --no-daemon
 Result: BUILD SUCCESSFUL
-JUnit: 23 tests passed; 0 failures; 0 errors; 0 skipped.
-ReconnectControllerTest: 17 passed.
-SessionHistoryTest: 6 passed.
+JUnit: 57 tests passed; 0 failures; 0 errors; 0 skipped.
+bot.reconnect.ConnectionTransformTest: 2 passed
+bot.reconnect.PersistentCooldownTest: 12 passed
+bot.reconnect.ReconnectControllerTest: 21 passed
+bot.reconnect.RestartIntegrationTest: 16 passed
+bot.reconnect.SessionHistoryTest: 6 passed
 Target: ZenithProxy 3.7.0+1.21.4; Minecraft 1.21.4.
-Build Java: 25; output class version: 65 (Java 21).
+Build Java: 25; plugin output: Java 21.
 Entrypoint: bot.reconnect.FixedReconnectDelayPlugin
 Plugin ID: fixed-reconnect-delay
-Plugin metadata: zenithproxy.plugin.json present.
-Release: release/FixedReconnectDelay-1.0.0.jar
-Bytes: 9791
-SHA256: 243EAFF3EC339B7378CBB5C73B20AD5DB87187BA4E59253229FB0B460D8B0E01
-No live Minecraft/Zenith session was started during validation.
+Connection guard: Proxy.connect() and Proxy.connect(String,int) transformed and executed in the actual Zenith shared application classloader.
+Early disconnect hook: actual pinned ClientSession bytecode transformed and checked before its teardown.
+Restart sequence: real Zenith event classes and SimpleEventBus with an isolated destination/session adapter.
+Persistence: saved cooldown, offline expiry, repeated restarts, established-session crash, failed-attempt exception and storage errors covered.
+Release: release/FixedReconnectDelay-1.0.1.jar
+Bytes: 26427
+SHA256: eef99aea08bec052f2a9e7040919f5fa965a6589d630f0665a9cc10376ede88f
+No live Minecraft/2b2t session, live VPS restart or production plugin installation was performed.

@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "bot.reconnect"
-version = "1.0.0"
+version = "1.0.1"
 
 java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }
 
@@ -28,4 +28,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-tasks.test { useJUnitPlatform() }
+tasks.test {
+    useJUnitPlatform()
+    systemProperty("reconnect.test.classpath", sourceSets.test.get().runtimeClasspath.asPath)
+}

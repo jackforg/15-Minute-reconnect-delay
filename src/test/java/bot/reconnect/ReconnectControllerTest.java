@@ -10,6 +10,52 @@ import org.junit.jupiter.api.Test;
 
 class ReconnectControllerTest {
   @Test
+  void resumedCooldownUsesOnlyTheRemainingTime() {
+    var fixture = new Fixture();
+    fixture.controller.resumeCooldown(TimeUnit.SECONDS.toNanos(600));
+    fixture.advanceSeconds(599);
+    assertEquals(0, fixture.connects);
+    fixture.advanceSeconds(1);
+    assertEquals(1, fixture.connects);
+  }
+
+  @Test
+  void anExpiredResumedCooldownSchedulesAnImmediateAttempt() {
+    var fixture = new Fixture();
+    fixture.controller.resumeCooldown(0);
+    fixture.advanceNanos(0);
+    assertEquals(1, fixture.connects);
+  }
+
+  @Test
+  void networkDisconnectCallbackDoesNotWaitForTheConnectMonitor() {
+    var fixture = new Fixture();
+    fixture.onConnect = () -> {
+      var callback = Thread.ofVirtual().start(() -> fixture.controller.disconnected(false));
+      try { callback.join(2000); }
+      catch (InterruptedException failure) { throw new AssertionError(failure); }
+      assertFalse(callback.isAlive(), "Login must not hold a monitor needed by the network disconnect callback");
+    };
+    fixture.controller.disconnected(true);
+    fixture.advanceSeconds(900);
+    assertEquals(2, fixture.tasks.size());
+  }
+
+  @Test
+  void aNewCooldownDuringTheFailureDecisionCannotBeReplacedByAFiveSecondTimer() {
+    var fixture = new Fixture();
+    fixture.onAllowed = () -> {
+      fixture.onAllowed = () -> {};
+      fixture.controller.resumeCooldown(TimeUnit.SECONDS.toNanos(900));
+    };
+    fixture.controller.disconnected(false);
+    fixture.advanceSeconds(5);
+    assertEquals(0, fixture.connects);
+    fixture.advanceSeconds(895);
+    assertEquals(1, fixture.connects);
+  }
+
+  @Test
   void establishedSessionWaits900SecondsAndConnectsOnceAtTheDeadline() {
     var fixture = new Fixture();
     fixture.controller.disconnected(true);

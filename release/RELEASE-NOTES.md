@@ -1,19 +1,26 @@
-Standalone ZenithProxy plugin that schedules automatic reconnect **15 minutes (900 seconds)** after an established Minecraft world or queue session disconnects. This covers server restarts, kicks, timeouts, connection resets, and manual disconnects.
+Fixes the restart sequence **Reconfiguring -> Started Queuing / Kicked to queue**. Version 1.0.0 only handled actual network disconnects, so that backend transfer could bypass its timer.
 
-**Failed connection attempts are the delay exception:** refused connections, authentication failures, and rejected logins use the existing `autoReconnect delay` setting instead (5 seconds by default). Failed attempts do not restart the 15-minute timer.
+### Fixed behavior
 
-### Install
+- Close an established session when it reconfigures or is kicked from the world back into queue, then wait **900 seconds (15 minutes)** before connecting again.
+- Keep one deadline for the reconfiguration/queue/disconnect sequence.
+- Save the cooldown across Zenith/VPS restarts and resume the remaining time. A crash of a previously established session starts a full wait at the next startup.
+- Block startup auto-connect, update reconnect, direct module connects and manual connects while the cooldown is active, before authentication/network work.
+- Keep failed connection attempts on the normal `autoReconnect delay` interval (5 seconds by default).
 
-1. Download `FixedReconnectDelay-1.0.0.jar` below.
-2. Stop ZenithProxy, put the JAR in its `plugins` folder, and start ZenithProxy.
-3. Keep `autoReconnect on`. The plugin's 900-second session-disconnect delay has no extra configuration.
+### Upgrade
 
-Built against **ZenithProxy 3.7.0+1.21.4**, for **Minecraft 1.21.4**. Output targets **Java 21**. All **23 tests passed** locally; no live Minecraft server test was performed.
+1. Stop ZenithProxy.
+2. Replace `FixedReconnectDelay-1.0.0.jar` with `FixedReconnectDelay-1.0.1.jar` in its `plugins` folder. Keep only the new version installed.
+3. Preserve the `plugins/fixed-reconnect-delay` state folder on future upgrades/restarts.
+4. Start ZenithProxy through its normal Java launcher and keep `autoReconnect on`.
 
-Existing reconnect vetoes and watchdog emergency stops remain in force. Timers run while Zenith is running and are not saved across a Zenith process restart. An explicit manual connect or another module can bypass the automatic timer. The attempt is scheduled for 900 seconds; actual login can be later due to scheduling, authentication, network conditions, or the server queue.
+Targets **Minecraft 1.21.4**, built against **ZenithProxy 3.7.0+1.21.4**. Requires compatible `ProxyLaunchWrapper` transformation support; output classes target Java 21. The first upgrade with startup auto-connect enabled waits 15 minutes because v1.0.0 did not save session history.
 
-SHA-256 for the JAR:
+Existing watchdog/emergency reconnect vetoes remain in force. All **57 tests passed**, including real Zenith events and shared-classloader transformation checks. See the attached `BUILD-RESULT.txt` for the recorded results. No live Minecraft/2b2t restart was performed during validation.
+
+JAR SHA-256:
 
 ```text
-243eaff3ec339b7378cbb5c73b20ad5db87187ba4e59253229fb0b460d8b0e01
+eef99aea08bec052f2a9e7040919f5fa965a6589d630f0665a9cc10376ede88f
 ```

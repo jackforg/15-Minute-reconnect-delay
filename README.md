@@ -1,39 +1,57 @@
-# FixedReconnectDelay 1.0.0
+# FixedReconnectDelay 1.0.1
 
-**The delay is 15 minutes (900 seconds).**
+Standalone ZenithProxy plugin that waits **15 minutes (900 seconds)** after an established session is lost. Failed connection attempts use the normal retry delay instead.
 
-Standalone ZenithProxy plugin for Minecraft **1.21.4**, built against ZenithProxy **3.7.0+1.21.4**. Install this JAR separately from ObsidianFarmWatchdog.
+## Download and upgrade
 
-After a session that reached the Minecraft world or queue disconnects, the plugin schedules the next automatic connection attempt for **900 seconds (15 minutes)** later. The reason does not change the delay: server restart/shutdown, kick, timeout, connection reset, manual disconnect, and maximum playtime all use the same timer.
-
-**Failed connection attempts are the only delay exception.** Refused connections, failed authentication, and rejected login/handshake attempts use the existing `autoReconnect delay` setting instead (Zenith's default is 5 seconds). They do not start another 15-minute wait. A successful session's next disconnect starts a fresh 15 minutes.
-
-## Install
-
-Download [FixedReconnectDelay-1.0.0.jar](https://github.com/jackforg/15-Minute-reconnect-delay/releases/download/v1.0.0/FixedReconnectDelay-1.0.0.jar) from the [v1.0.0 release](https://github.com/jackforg/15-Minute-reconnect-delay/releases/tag/v1.0.0).
+Download [FixedReconnectDelay-1.0.1.jar](https://github.com/jackforg/15-Minute-reconnect-delay/releases/download/v1.0.1/FixedReconnectDelay-1.0.1.jar) from the [v1.0.1 release](https://github.com/jackforg/15-Minute-reconnect-delay/releases/tag/v1.0.1).
 
 1. Stop ZenithProxy.
-2. Copy `FixedReconnectDelay-1.0.0.jar` into its `plugins` folder.
-3. Start ZenithProxy with plugins enabled and run `autoReconnect on` if needed.
+2. Remove the old `FixedReconnectDelay-1.0.0.jar` from the Zenith `plugins` folder and put the new JAR there. Keep only one version installed.
+3. Keep the `plugins/fixed-reconnect-delay` state folder when upgrading or restarting.
+4. Start ZenithProxy through its normal Java launcher, with plugins enabled and `autoReconnect on`.
 
-There are no plugin commands or settings. The 900-second session-disconnect delay is fixed. `autoReconnect delay <seconds>` only controls failed-attempt retries while this plugin is installed. `autoReconnect off` disables automatic reconnects. Remove the JAR and restart Zenith to restore its built-in scheduler.
+Built against **ZenithProxy 3.7.0+1.21.4**, for **Minecraft 1.21.4**. It requires that version or a compatible Java release with the `ProxyLaunchWrapper` plugin transformation support. Plugin classes target Java 21; building against the pinned dependency uses Java 25. An older/direct `com.zenith.Proxy` entrypoint cannot install the new connection guard and reports a load error. Use a compatible Zenith release with its normal launcher.
 
-The plugin replaces the built-in reconnect timer in memory, avoiding its extra random jitter. Scheduling uses a monotonic clock and a single nonblocking timer. The connection attempt is due at 900 seconds; JVM/OS scheduling, authentication, network latency, server availability, and queue time can make the actual login later. This is not a hard real-time guarantee.
+## What starts the wait
 
-Timers run while the Zenith process is running; they are not persisted across a Zenith process restart. Manually issuing a connect command or another module explicitly initiating a connection can bypass the automatic timer. A Minecraft server restart is covered through its disconnect event.
+- A real disconnect after reaching the Minecraft world or queue: server restart/shutdown, kick, timeout, reset, or manual disconnect.
+- An established session entering reconfiguration. The plugin explicitly closes that connection instead of following the backend transfer immediately.
+- Being kicked from the world back to queue, including the **Reconfiguring -> Started Queuing / Kicked to queue** restart sequence that v1.0.0 missed.
 
-Intentional reconnect controls remain in force: disabling AutoReconnect or another plugin vetoing reconnect prevents the attempt. In particular, this plugin does not reset or bypass an ObsidianFarmWatchdog emergency trip. Use the watchdog's normal recovery procedure before enabling reconnect again.
+Reconfiguration, queue notifications, and the resulting physical disconnect count as one incident. They do not restart or extend the same timer. A fresh login entering configuration or queue is allowed normally.
 
-## Build
+All Zenith connection entrypoints check the active cooldown **before authentication or connection work**. Startup auto-connect, update reconnect, other modules, and manual `connect`/`reconnect` commands cannot jump ahead of that deadline.
 
-Java 25 is used to compile against the pinned Zenith dependency; the resulting plugin targets Java 21. From this folder:
+## Zenith/VPS restarts
+
+The state is saved atomically in `plugins/fixed-reconnect-delay/cooldown.properties`.
+
+- Restart during a cooldown: resume its **remaining time**, including time spent offline. Repeated restarts do not reset the same deadline.
+- Crash/restart after an established session, without a disconnect callback: start a full 900-second wait at the next startup. The plugin cannot know the precise instant an ungraceful process died.
+- Upgrade/first installation with startup auto-connect requested and no saved history: start a 900-second startup wait.
+- Restart during failed connection attempts: retain the failed-attempt exception, without adding another 15 minutes.
+
+A running process uses a monotonic clock, so changing its wall clock does not shorten an active wait. Wall-clock time is used to recover the saved deadline after a process restart.
+
+## Failed-attempt exception and reconnect controls
+
+Refused connections, authentication failures, and rejected login/handshake attempts use `autoReconnect delay <seconds>` (Zenith's default is 5 seconds). They do not start a new 900-second timer. After a successful world/queue session, its next loss starts another full cooldown.
+
+There are no plugin commands or delay settings. `autoReconnect off` prevents the scheduled automatic attempt. Other plugins' reconnect vetoes remain in force; this plugin does not reset or bypass an ObsidianFarmWatchdog emergency trip.
+
+The attempt becomes due at 900 seconds; JVM/OS scheduling, authentication, network conditions, and server queues can make the actual login later. This is not a hard real-time guarantee. State-storage errors are logged and block new connections rather than discarding the cooldown.
+
+## Build and validation
+
+With Java 25 installed:
 
 ```powershell
 .\gradlew.bat clean test shadowJar
 ```
 
-The installable file is `build/libs/FixedReconnectDelay-1.0.0.jar`.
+Linux/macOS: `bash ./gradlew clean test shadowJar`.
 
-On Linux/macOS, run `bash ./gradlew clean test shadowJar` with Java 25 installed. Validation for v1.0.0 passed all 23 tests; see [BUILD-RESULT.txt](BUILD-RESULT.txt). No live server session was used for validation.
+The result is `build/libs/FixedReconnectDelay-1.0.1.jar`. All **57 tests passed**. The regression suite exercises actual Zenith event types/event bus, durable restart recovery, and the connection transformers against the pinned Zenith classes and shared application classloader. See [BUILD-RESULT.txt](BUILD-RESULT.txt) for the result and checksum. No live Minecraft/2b2t session is used by those tests.
 
-The `release/` directory contains the tested JAR, its SHA-256 checksum, and release notes. The GitHub Actions release workflow verifies that checksum before attaching the assets and publishing v1.0.0.
+The `release/` directory contains the tested JAR, checksum and release notes. The release workflow checks the checksum before publishing the downloads.
