@@ -1,22 +1,24 @@
-FixedReconnectDelay 1.0.1
-Validation date: 2026-10-21 (Europe/London)
-Commands: .\gradlew.bat --offline clean test shadowJar --console=plain --no-daemon; final .\gradlew.bat --offline test shadowJar --console=plain --no-daemon
+FixedReconnectDelay 1.0.2
+Validation date: 2026-10-28 (America/New_York)
+Command: .\gradlew.bat --offline test shadowJar --console=plain --no-daemon
 Result: BUILD SUCCESSFUL
-JUnit: 57 tests passed; 0 failures; 0 errors; 0 skipped.
+JUnit: 61 tests passed; 0 failures; 0 errors; 0 skipped.
 bot.reconnect.ConnectionTransformTest: 2 passed
+bot.reconnect.LoginFlowIntegrationTest: 2 passed
 bot.reconnect.PersistentCooldownTest: 12 passed
 bot.reconnect.ReconnectControllerTest: 21 passed
-bot.reconnect.RestartIntegrationTest: 16 passed
+bot.reconnect.RestartIntegrationTest: 18 passed
 bot.reconnect.SessionHistoryTest: 6 passed
 Target: ZenithProxy 3.7.0+1.21.4; Minecraft 1.21.4.
 Build Java: 25; plugin output: Java 21.
 Entrypoint: bot.reconnect.FixedReconnectDelayPlugin
 Plugin ID: fixed-reconnect-delay
+Regression reproduction: both first-connect and queue-to-world tests failed on v1.0.1 before the fix.
+Initial login: actual Zenith CStartConfigurationHandler and ClientSession state execute through the global event bus and Module.enable lifecycle. A queued first login switches to CONFIGURATION and sends its acknowledgement without a close or cooldown. After world play, the same handler closes and reconnects at 900 seconds.
 Connection guard: Proxy.connect() and Proxy.connect(String,int) transformed and executed in the actual Zenith shared application classloader.
 Early disconnect hook: actual pinned ClientSession bytecode transformed and checked before its teardown.
-Restart sequence: real Zenith event classes and SimpleEventBus with an isolated destination/session adapter.
-Persistence: saved cooldown, offline expiry, repeated restarts, established-session crash, failed-attempt exception and storage errors covered.
-Release: release/FixedReconnectDelay-1.0.1.jar
-Bytes: 26427
-SHA256: eef99aea08bec052f2a9e7040919f5fa965a6589d630f0665a9cc10376ede88f
+Persistence: synthetic v1.0.1 startup timer migration; real saved deadlines, offline expiry, repeated restarts, established-session crash, failed-attempt exception and storage errors covered.
+Release: release/FixedReconnectDelay-1.0.2.jar
+Bytes: 26295
+SHA256: ae4373e42b47d4d21615ad63d5db0703bd88dad2c6189bc552aaa57acf4edaf8
 No live Minecraft/2b2t session, live VPS restart or production plugin installation was performed.

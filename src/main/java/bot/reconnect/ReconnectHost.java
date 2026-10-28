@@ -11,7 +11,6 @@ interface ReconnectHost {
   Session session(Object identity);
   boolean connectionActive();
   boolean reconnectEnabled();
-  boolean startupConnectRequested();
   int failedAttemptDelaySeconds();
   void stopBuiltinReconnect();
   void connect();

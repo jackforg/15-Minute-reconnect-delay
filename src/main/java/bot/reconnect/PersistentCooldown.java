@@ -19,23 +19,23 @@ final class PersistentCooldown {
   private boolean timed;
   private boolean failed;
 
-  PersistentCooldown(CooldownStore store, LongSupplier millis, LongSupplier nanos,
-      boolean startupConnectRequested) {
+  PersistentCooldown(CooldownStore store, LongSupplier millis, LongSupplier nanos) {
     this.store = store;
     this.millis = millis;
     this.nanos = nanos;
     try { state = store.load(); }
     catch (IOException failure) { throw new UncheckedIOException(failure); }
+    // v1.0.1 created a cooldown without any prior session on a fresh install.
+    // Remove only that synthetic wait; preserve real saved disconnect deadlines.
+    if (state.mode() == Mode.WAITING
+        && state.reason().equals("Initial startup with automatic connection requested"))
+      persist(new Snapshot(Mode.EMPTY, 0, "First connection ready"));
     if (state.mode() == Mode.WAITING) {
       long remaining = Math.max(0, Math.min(DELAY_MILLIS, state.deadlineEpochMillis() - millis.getAsLong()));
       deadlineNanos = nanos.getAsLong() + TimeUnit.MILLISECONDS.toNanos(remaining);
       timed = remaining > 0;
     } else if (state.mode() == Mode.CONNECTED) {
       begin("Zenith restarted after an established session");
-    } else if (state.mode() == Mode.EMPTY && startupConnectRequested) {
-      // Upgrading from 1.0.0 has no saved history. Do not allow the upgrade's startup
-      // auto-connect to silently bypass the new restart protection.
-      begin("Initial startup with automatic connection requested");
     }
   }
 

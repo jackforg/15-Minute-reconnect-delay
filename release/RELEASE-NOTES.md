@@ -1,26 +1,20 @@
-Fixes the restart sequence **Reconfiguring -> Started Queuing / Kicked to queue**. Version 1.0.0 only handled actual network disconnects, so that backend transfer could bypass its timer.
+Fixes v1.0.1 interrupting the first connection when the bot reconfigures from queue into the world. That ordinary login transition was being treated as a lost session.
 
 ### Fixed behavior
 
-- Close an established session when it reconfigures or is kicked from the world back into queue, then wait **900 seconds (15 minutes)** before connecting again.
-- Keep one deadline for the reconfiguration/queue/disconnect sequence.
-- Save the cooldown across Zenith/VPS restarts and resume the remaining time. A crash of a previously established session starts a full wait at the next startup.
-- Block startup auto-connect, update reconnect, direct module connects and manual connects while the cooldown is active, before authentication/network work.
-- Keep failed connection attempts on the normal `autoReconnect delay` interval (5 seconds by default).
+- Allow normal initial configuration, initial queue entry, and the queue-to-world handoff to finish.
+- Allow the first automatic or manual connection immediately when there is no saved previous session or disconnect.
+- Automatically clear the synthetic first-start timer written by v1.0.1. Keep real saved cooldowns and their remaining time.
+- Continue waiting **900 seconds (15 minutes)** after actual world/queue disconnects, world-to-queue restart transfers, and reconfiguration after world play.
+- Preserve cooldowns across Zenith/VPS restarts. Failed connection attempts still use the normal retry interval.
 
 ### Upgrade
 
 1. Stop ZenithProxy.
-2. Replace `FixedReconnectDelay-1.0.0.jar` with `FixedReconnectDelay-1.0.1.jar` in its `plugins` folder. Keep only the new version installed.
-3. Preserve the `plugins/fixed-reconnect-delay` state folder on future upgrades/restarts.
-4. Start ZenithProxy through its normal Java launcher and keep `autoReconnect on`.
+2. Remove the older `FixedReconnectDelay` JAR and put `FixedReconnectDelay-1.0.2.jar` in its `plugins` folder. Keep only one version installed.
+3. Preserve the `plugins/fixed-reconnect-delay` state folder.
+4. Start ZenithProxy through its normal Java launcher with `autoReconnect on`.
 
-Targets **Minecraft 1.21.4**, built against **ZenithProxy 3.7.0+1.21.4**. Requires compatible `ProxyLaunchWrapper` transformation support; output classes target Java 21. The first upgrade with startup auto-connect enabled waits 15 minutes because v1.0.0 did not save session history.
+Targets **Minecraft 1.21.4**, built against **ZenithProxy 3.7.0+1.21.4**. Requires compatible `ProxyLaunchWrapper` transformation support; output classes target Java 21.
 
-Existing watchdog/emergency reconnect vetoes remain in force. All **57 tests passed**, including real Zenith events and shared-classloader transformation checks. See the attached `BUILD-RESULT.txt` for the recorded results. No live Minecraft/2b2t restart was performed during validation.
-
-JAR SHA-256:
-
-```text
-eef99aea08bec052f2a9e7040919f5fa965a6589d630f0665a9cc10376ede88f
-```
+Existing watchdog/emergency reconnect vetoes remain in force. The tests include Zenith's actual configuration handler, session state, event bus, module lifecycle and connection transformations. See the attached `BUILD-RESULT.txt` and `SHA256SUMS` for validation and the artifact checksum. No live Minecraft/2b2t restart was performed during validation.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 - 2026-10-28
+
+- Fix initial login getting interrupted when a queued session reconfigures to enter the world. Only reconfiguration after reaching the world starts a cooldown; a real disconnect while queued still waits 900 seconds.
+- Allow the first automatic or manual connection immediately when no prior session or disconnect is saved.
+- Automatically clear v1.0.1's synthetic first-start timer while preserving real saved disconnect deadlines.
+- Keep world-to-queue restart protection, durable cooldown recovery, connection guards, normal failed-attempt retries, and other plugins' reconnect vetoes.
+- Add regressions for first login and the queued handoff, including execution of Zenith's actual configuration packet handler and module lifecycle without opening a network connection.
+
 ## 1.0.1 - 2026-10-21
 
 - Fix the server restart path that reconfigures an established session and kicks it directly back to queue without a network disconnect.

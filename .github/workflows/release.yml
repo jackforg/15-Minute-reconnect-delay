@@ -1,4 +1,4 @@
-name: Publish v1.0.1
+name: Publish v1.0.2
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-v1.0.1
+  group: release-v1.0.2
   cancel-in-progress: false
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag=v1.0.1
+          tag=v1.0.2
           if gh release view "$tag" --json isDraft --jq '.isDraft' > "$RUNNER_TEMP/release-state" 2>/dev/null; then
             if [ "$(cat "$RUNNER_TEMP/release-state")" = false ]; then
               echo "Release $tag is already published; leaving it unchanged."
@@ -42,12 +42,12 @@ jobs:
           else
             gh release create "$tag" \
               --target "$GITHUB_SHA" \
-              --title 'FixedReconnectDelay v1.0.1 - restart and queue cooldown fix' \
+              --title 'FixedReconnectDelay v1.0.2 - initial login and queue handoff fix' \
               --notes-file release/RELEASE-NOTES.md \
               --draft
           fi
           gh release upload "$tag" \
-            release/FixedReconnectDelay-1.0.1.jar \
+            release/FixedReconnectDelay-1.0.2.jar \
             release/SHA256SUMS \
             BUILD-RESULT.txt \
             --clobber

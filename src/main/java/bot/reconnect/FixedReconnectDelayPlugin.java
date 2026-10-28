@@ -6,7 +6,7 @@ import com.zenith.plugin.api.ZenithProxyPlugin;
 
 @Plugin(
     id = "fixed-reconnect-delay",
-    version = "1.0.1",
+    version = "1.0.2",
     description = "Wait 15 minutes after a disconnect; failed connection attempts use the normal retry delay",
     authors = {"FixedReconnectDelay"},
     mcVersions = {"1.21.4"},
@@ -27,7 +27,8 @@ public final class FixedReconnectDelayPlugin implements ZenithProxyPlugin {
     api.registerModule(module);
     if (!module.isEnabled()) throw new IllegalStateException("Reconnect delay module failed to enable");
     api.getLogger().info(
-        "Loaded v1.0.1: disconnects, reconfiguration and kicks to queue start a saved 900-second cooldown. "
-            + "All connection attempts respect that cooldown. Failed attempts use autoReconnect delay.");
+        "Loaded v1.0.2: first login and queue-to-world configuration are allowed. "
+            + "Disconnects, world reconfiguration and kicks to queue start a saved 900-second cooldown. "
+            + "Failed attempts use autoReconnect delay.");
   }
 }

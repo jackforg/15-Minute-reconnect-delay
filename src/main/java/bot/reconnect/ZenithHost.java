@@ -25,9 +25,6 @@ final class ZenithHost implements ReconnectHost {
     return Proxy.getInstance().getLoggingIn().get() || (client != null && !client.isTerminalState());
   }
   @Override public boolean reconnectEnabled() { return CONFIG.client.extra.autoReconnect.enabled; }
-  @Override public boolean startupConnectRequested() {
-    return CONFIG.client.autoConnect || CONFIG.autoUpdater.shouldReconnectAfterAutoUpdate;
-  }
   @Override public int failedAttemptDelaySeconds() { return CONFIG.client.extra.autoReconnect.delaySeconds; }
   @Override public void stopBuiltinReconnect() {
     var builtin = MODULE.get(AutoReconnect.class);

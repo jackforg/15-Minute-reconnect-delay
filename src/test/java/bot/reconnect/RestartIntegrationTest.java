@@ -72,6 +72,34 @@ class RestartIntegrationTest {
     assertTrue(fixture.tasks.isEmpty());
   }
 
+  @Test void firstAutomaticConnectionIsAllowedWithoutSavedSessionHistory() {
+    var fixture = new Fixture(directory.resolve("state"), 1_800_000_000_000L);
+    fixture.host.connect();
+    assertEquals(1, fixture.host.attempts);
+    assertTrue(fixture.tasks.isEmpty());
+  }
+
+  @Test void initialQueueToWorldReconfigurationCanCompleteThenItsRealDisconnectWaits() {
+    var fixture = fixture();
+    fixture.host.connect();
+    var login = fixture.host.client;
+    login.queue = true;
+    fixture.host.events.post(new QueueStartEvent(false, Duration.ZERO));
+    fixture.host.events.post(new ClientConfigurationEvent.Entering());
+    assertEquals(0, fixture.host.disconnects);
+    assertFalse(login.terminal);
+    assertTrue(fixture.tasks.isEmpty());
+    login.queue = false;
+    login.online = true;
+    login.wasOnline = true;
+    fixture.host.events.post(new ClientOnlineEvent());
+    fixture.host.disconnect(login, "Server restart after login");
+    fixture.advance(899);
+    assertEquals(1, fixture.host.attempts);
+    fixture.advance(1);
+    assertEquals(2, fixture.host.attempts);
+  }
+
   @Test void initialQueueEntryIsAllowedAndItsLaterDisconnectWaits900Seconds() {
     var fixture = fixture();
     fixture.host.client = new Client();
@@ -116,7 +144,7 @@ class RestartIntegrationTest {
     first.host.disconnect(first.host.client, "Restart");
     first.advance(300);
     first.module.onDisable();
-    var restarted = new Fixture(directory.resolve("state"), first.millis, true);
+    var restarted = new Fixture(directory.resolve("state"), first.millis);
     restarted.host.connect(); // Zenith startup autoConnect and update reconnect both enter this guard.
     assertEquals(0, restarted.host.attempts);
     restarted.advance(599);
@@ -129,7 +157,7 @@ class RestartIntegrationTest {
     var first = fixture();
     first.worldOnline();
     first.module.onDisable(); // No disconnect callback: simulate a crash or VPS power loss.
-    var restarted = new Fixture(directory.resolve("state"), first.millis, true);
+    var restarted = new Fixture(directory.resolve("state"), first.millis);
     restarted.host.connect();
     restarted.advance(899);
     assertEquals(0, restarted.host.attempts);
@@ -142,7 +170,7 @@ class RestartIntegrationTest {
     first.worldOnline();
     first.host.disconnect(first.host.client, "Restart");
     first.module.onDisable();
-    var restarted = new Fixture(directory.resolve("state"), first.millis + 901_000, false);
+    var restarted = new Fixture(directory.resolve("state"), first.millis + 901_000);
     assertEquals(0, restarted.host.attempts);
     restarted.advance(0);
     assertEquals(1, restarted.host.attempts);
@@ -169,7 +197,7 @@ class RestartIntegrationTest {
     first.host.connect();
     first.host.disconnect(first.host.client, "Connection refused");
     first.module.onDisable();
-    var restarted = new Fixture(directory.resolve("state"), first.millis, true);
+    var restarted = new Fixture(directory.resolve("state"), first.millis);
     restarted.host.connect();
     assertEquals(1, restarted.host.attempts);
   }
@@ -210,7 +238,7 @@ class RestartIntegrationTest {
     assertEquals(0, fixture.host.attempts);
   }
 
-  private Fixture fixture() { return new Fixture(directory.resolve("state"), 1_800_000_000_000L, false); }
+  private Fixture fixture() { return new Fixture(directory.resolve("state"), 1_800_000_000_000L); }
 
   private static final class Fixture {
     final FakeHost host = new FakeHost();
@@ -219,9 +247,8 @@ class RestartIntegrationTest {
     long millis;
     long nanos;
 
-    Fixture(Path file, long millis, boolean startup) {
+    Fixture(Path file, long millis) {
       this.millis = millis;
-      host.startup = startup;
       module = new FixedReconnectModule(host, new CooldownStore(file), () -> this.millis, () -> nanos,
           (action, delay) -> {
             var task = new Task(action, nanos + delay);
@@ -259,7 +286,7 @@ class RestartIntegrationTest {
   private static final class FakeHost implements ReconnectHost {
     final SimpleEventBus events = new SimpleEventBus();
     Client client;
-    boolean enabled = true, startup;
+    boolean enabled = true;
     int attempts, disconnects;
     String lastCloseReason;
     @Override public SimpleEventBus events() { return events; }
@@ -271,7 +298,6 @@ class RestartIntegrationTest {
     }
     @Override public boolean connectionActive() { return client != null && !client.terminal; }
     @Override public boolean reconnectEnabled() { return enabled; }
-    @Override public boolean startupConnectRequested() { return startup; }
     @Override public int failedAttemptDelaySeconds() { return 5; }
     @Override public void stopBuiltinReconnect() {}
     @Override public void connect() {

@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "bot.reconnect"
-version = "1.0.1"
+version = "1.0.2"
 
 java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }
 

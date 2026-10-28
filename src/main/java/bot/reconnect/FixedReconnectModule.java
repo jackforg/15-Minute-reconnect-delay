@@ -34,7 +34,7 @@ public final class FixedReconnectModule extends Module implements ConnectionGate
   FixedReconnectModule(ReconnectHost host, CooldownStore store, LongSupplier millis,
       LongSupplier nanos, ReconnectController.Scheduler scheduler) {
     this.host = host;
-    cooldown = new PersistentCooldown(store, millis, nanos, host.startupConnectRequested());
+    cooldown = new PersistentCooldown(store, millis, nanos);
     lastDisconnect = new ClientDisconnectEvent(cooldown.reason());
     controller = new ReconnectController(new ReconnectController.Actions() {
       @Override public boolean allowed() { return reconnectAllowed(); }
@@ -75,7 +75,10 @@ public final class FixedReconnectModule extends Module implements ConnectionGate
 
   private void reconfigured() {
     var client = host.currentSession();
-    if (client != null && !client.terminal() && (client.wasOnline() || client.online() || client.inQueue()))
+    // A queued session must reconfigure to enter the world on its first login.
+    // Only a session that has reached the world can be losing that world here.
+    // An actual socket disconnect while queued is still handled by beforeDisconnect.
+    if (client != null && !client.terminal() && (client.wasOnline() || client.online()))
       transitionLost(client, RECONFIGURED);
   }
 
